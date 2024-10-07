@@ -1,0 +1,51 @@
+#!/bin/bash
+# Author: Xavier Miranda
+# Date: 2024-10-07
+#
+# This pre-commit hook acts as a "barrel" for running multiple pre-commit hooks.
+# It checks for hooks stored in the common Git directory (`git rev-parse --git-common-dir`), executes them, and handles cases for hooks that are not executable or are sample files.
+#
+# How it works:
+# - The script searches for all hooks matching `pre-commit.*` in the common hooks directory.
+# - It skips any hook that ends in 'sample' to avoid running example or placeholder hooks.
+# - Hooks are executed if they are marked as executable.
+# - If a hook is not executable, the user is prompted to decide whether to continue.
+# - If any hook exits with a non-zero status, the commit is aborted.
+#
+# Usage:
+# - Place this script in the `.git/hooks/` directory and name it `pre-commit`.
+# - Add other pre-commit hooks in the common Git directory (`$(git rev-parse --git-common-dir)/hooks`) and name them `pre-commit.*`.
+# - Make sure each hook is executable (`chmod +x`), except sample hooks which are ignored.
+# - Run `chmod +x .git/hooks/pre-commit` to make this script executable.
+
+hooks="$(git rev-parse --git-common-dir)/hooks"
+
+if [ -d "$hooks" ]; then
+    # Loop through all files matching pre-commit.*
+    for hook in "$hooks"/pre-commit.*; do
+        hookname=$(basename "$hook")
+        
+        # Skip sample hooks
+        if [[ "$hook" == *sample ]]; then
+            continue
+        fi
+        
+        # Check if the file is executable
+        if [ -x "$hook" ]; then
+            echo -e "Running hook: $hookname \n"
+            "$hook"
+            
+            # Abort if hook fails
+            if [ $? -ne 0 ]; then
+                echo -e "Commit aborted caused by $hookname"
+                exit 1
+            fi
+        else
+            echo -e "Non-executable hook detected: $hookname."
+            read -p "Continue? (y/N) " continue
+            if [[ "$continue" != "y" ]]; then
+                exit 1
+            fi
+        fi
+    done
+fi
