@@ -1,0 +1,28 @@
+#!/bin/bash
+# Author: Xavier Miranda
+# Date: 2024-10-07
+#
+# This Git pre-commit hook checks for any staged 'appsettings' files and prompts the user for confirmation before proceeding with the commit.
+# This is useful to prevent accidentally committing sensitive configuration information, specially in .Net projects, where appsettings can have
+# credentials that shouldn't be pushed to the remote repository
+#
+# How it works:
+# - The hook scans the staged files (using 'git diff --cached --name-only') and looks for any file with 'appsettings' in its name.
+# - If one or more 'appsettings' files are found, it issues a warning and prompts the user to confirm if they want to continue with the commit.
+# - The prompt asks for a 'y' or 'n' input, where only 'y' allows the commit to proceed.
+# - If the response is anything other than 'y', the commit is aborted.
+#
+# Usage:
+# - Place this script in the `.git/hooks/` directory of your repository.
+# - Ensure the script has execute permissions (e.g., run `chmod +x .git/hooks/pre-commit`).
+#
+if git diff --cached --name-only | grep -q 'appsettings'; then
+	echo "Warning: appsettings files(s) are staged for commit."
+        # Fallback for environments without /dev/tty (like Visual Studio)
+        read -p "Are you sure you want to continue with the commit? (y/n): " confirm < /dev/tty
+	if [[ "$confirm" != "y" ]]; then
+		#echo "Commit aborted."
+		exit 1 
+	fi;
+fi;
+
